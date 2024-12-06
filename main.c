@@ -1,40 +1,85 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <application-name>\n", argv[0]);
-        return 1;
-    }
-
-    pid_t pid = fork();
+void fork_and_exit_parent()
+{
+    pid_t pid;
     
+    pid = fork();
     switch (pid)
     {
     case -1:
         perror("fork");
-        return 1;
-    
+        exit(EXIT_FAILURE);
+
     case 0:
-        char *args[] = {argv[1], NULL};
-        execvp(argv[1], args);
-        printf("excvp returned\n");
-        perror("execvp");
-        exit(1);
-    default:
-        int status;
-        printf("Child process started with PID: %d\n", pid);
-        waitpid(pid, &status, 0);
-        printf("Child process terminated\n");
-        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            printf("Child process terminated with an error\n");
-            return 1;
-        }
         break;
+
+    default:
+        exit(EXIT_SUCCESS);
+    }
+}
+
+void redirect_standard_io_to_null()
+{
+    int fd = open("/dev/null", O_RDWR);
+    if (fd < 0)
+    {
+        perror("open /dev/null");
+        exit(EXIT_FAILURE);
+    }
+    dup2(fd, STDIN_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
+    if (fd > 2)
+    {
+        close(fd);
+    }
+}
+
+void daemonize(const char *cmd)
+{
+    fork_and_exit_parent();
+    if (setsid() < 0)
+    {
+        perror("setsid");
+        exit(EXIT_FAILURE);
+    }
+    fork_and_exit_parent();
+
+    umask(0);
+
+    if (chdir("/") < 0)
+    {
+        perror("chdir");
+        exit(EXIT_FAILURE);
     }
 
-    return 0;
+    redirect_standard_io_to_null();
+
+    printf("Daemonization complete for %s\n", cmd);
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s <application-name>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    daemonize(argv[1]);
+
+    char *args[] = {argv[1], NULL};
+    if (execvp(argv[1], args) < 0)
+    {
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    }
+
+    return EXIT_SUCCESS;
 }

@@ -1,4 +1,4 @@
-all: build run
+all: build
 
 build: main.c
 	@echo "Building main.c"
@@ -6,6 +6,3 @@ build: main.c
 
 clean:
 	@if test -f nurky; then rm nurky; fi
-
-run: nurky
-	./nurky firefox
