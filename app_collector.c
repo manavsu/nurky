@@ -3,89 +3,157 @@
 #include <string.h>
 #include <dirent.h>
 #include <errno.h>
+#include "locations.h"
+#include "app.h"
 
 #define MAX_PATH 1024
 #define MAX_LINE 512
 
-// Parse a .desktop file to extract the "Name" and "Exec" fields
-void parse_desktop_file(const char *file_path) {
+int starts_with(const char *line, const char *prefix)
+{
+    return strncmp(line, prefix, strlen(prefix)) == 0;
+}
+
+App *parse_desktop_file(const char *file_path)
+{
     FILE *file = fopen(file_path, "r");
-    if (!file) {
+    if (!file)
+    {
         perror("Error opening file");
-        return;
+        return NULL;
     }
 
     char line[MAX_LINE];
     char name[MAX_LINE] = {0};
     char exec[MAX_LINE] = {0};
+    int no_display = 0, terminal = 0, hidden = 0;
 
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "Name=", 5) == 0) {
+    while (fgets(line, sizeof(line), file))
+    {
+        if (starts_with(line, "Name=") && !name[0])
+        {
             strncpy(name, line + 5, sizeof(name) - 1);
-            name[strcspn(name, "\n")] = '\0'; // Remove trailing newline
-        } else if (strncmp(line, "Exec=", 5) == 0) {
+            name[strcspn(name, "\n")] = '\0';
+        }
+        else if (starts_with(line, "Exec=") && !exec[0])
+        {
             strncpy(exec, line + 5, sizeof(exec) - 1);
-            exec[strcspn(exec, "\n")] = '\0'; // Remove trailing newline
+            exec[strcspn(exec, "\n")] = '\0';
+        }
+        else if (starts_with(line, "NoDisplay="))
+        {
+            no_display = strstr(line, "true") != NULL;
+        }
+        else if (starts_with(line, "Terminal="))
+        {
+            terminal = strstr(line, "true") != NULL;
+        }
+        else if (starts_with(line, "Hidden="))
+        {
+            hidden = strstr(line, "true") != NULL;
+        }
+        else if (starts_with(line, "Type="))
+        {
+            if (strstr(line, "Application") == NULL)
+            {
+                no_display = 1;
+            }
         }
 
-        // Stop parsing once both fields are found
-        if (name[0] && exec[0]) {
+        if (no_display || terminal || hidden)
+        {
             break;
         }
     }
 
     fclose(file);
 
-    if (name[0] && exec[0]) {
-        printf("Name: %s | Exec: %s\n", name, exec);
+    if (no_display || terminal || hidden || !name[0] || !exec[0])
+    {
+        return NULL;
     }
+
+    for (char *p = exec; *p; ++p)
+    {
+        if (*p == '%' && *(p + 1))
+        {
+            *p = '\0';
+            break;
+        }
+    }
+
+    App *app = malloc(sizeof(App));
+    if (app)
+    {
+        strncpy(app->name, name, sizeof(app->name) - 1);
+        strncpy(app->exec, exec, sizeof(app->exec) - 1);
+    }
+    
+    return app;
 }
 
-// Recursively search for .desktop files in a directory
-void search_desktop_files(const char *dir_path) {
+App **search_desktop_files(const char *dir_path)
+{
     DIR *dir = opendir(dir_path);
-    if (!dir) {
+    if (!dir)
+    {
         fprintf(stderr, "Error opening directory '%s': %s\n", dir_path, strerror(errno));
-        return;
+        return NULL;
     }
 
     struct dirent *entry;
     char full_path[MAX_PATH];
 
-    while ((entry = readdir(dir)) != NULL) {
-        // Skip "." and ".." entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+    App **discoverd_apps = NULL;
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        {
             continue;
         }
 
         snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, entry->d_name);
 
-        if (entry->d_type == DT_DIR) {
-            // Recursively search subdirectories
-            search_desktop_files(full_path);
-        } else if (strstr(entry->d_name, ".desktop")) {
-            // Parse .desktop file
-            parse_desktop_file(full_path);
+        if (entry->d_type == DT_DIR)
+        {
+            App **app = search_desktop_files(full_path);
+            if (app)
+            {
+                discoverd_apps = combine_apps(discoverd_apps, app);
+            }
+        }
+        else if (strstr(entry->d_name, ".desktop"))
+        {
+            App *app = parse_desktop_file(full_path);
+            if (app)
+            {
+                discoverd_apps = append_app(discoverd_apps, app);
+            }
         }
     }
 
     closedir(dir);
+    return discoverd_apps;
 }
 
-int main() {
-    // Standard locations for .desktop files
-    const char *locations[] = {
-        "/usr/share/applications",
-        "/usr/local/share/applications",
-        getenv("HOME") ? strcat(getenv("HOME"), "/.local/share/applications") : NULL
-    };
-
-    printf("Searching for launchable applications...\n");
-
-    for (int i = 0; i < sizeof(locations) / sizeof(locations[0]); i++) {
-        if (locations[i]) {
-            search_desktop_files(locations[i]);
+int main()
+{
+    App **discoverd_apps = NULL;
+    char **locations;
+    
+    locations = get_possible_app_locations();
+    for (int i = 0; locations[i] != NULL; i++)
+    {
+        App **apps = search_desktop_files(locations[i]);
+        if (apps)
+        {
+            discoverd_apps = combine_apps(discoverd_apps, apps);
         }
+    }
+    for (int i = 0; discoverd_apps[i] != NULL; i++)
+    {
+        printf("apps[%d] -> Name: %s | Exec: %s\n", i, discoverd_apps[i]->name, discoverd_apps[i]->exec);
     }
 
     return 0;

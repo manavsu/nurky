@@ -1,3 +1,4 @@
 /.vscode
 /nurky
 app_collector
+*.o
