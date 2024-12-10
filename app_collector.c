@@ -88,7 +88,7 @@ App *parse_desktop_file(const char *file_path)
         strncpy(app->name, name, sizeof(app->name) - 1);
         strncpy(app->exec, exec, sizeof(app->exec) - 1);
     }
-    
+
     return app;
 }
 
@@ -137,11 +137,28 @@ App **search_desktop_files(const char *dir_path)
     return discoverd_apps;
 }
 
+App **collect_apps()
+{
+    App **discoverd_apps = NULL;
+    char **locations;
+
+    locations = get_possible_app_locations();
+    for (int i = 0; locations[i] != NULL; i++)
+    {
+        App **apps = search_desktop_files(locations[i]);
+        if (apps)
+        {
+            discoverd_apps = combine_apps(discoverd_apps, apps);
+        }
+    }
+    return discoverd_apps;
+}
+
 int main()
 {
     App **discoverd_apps = NULL;
     char **locations;
-    
+
     locations = get_possible_app_locations();
     for (int i = 0; locations[i] != NULL; i++)
     {
