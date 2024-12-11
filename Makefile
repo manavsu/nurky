@@ -23,6 +23,10 @@ test: app locations app_collector
 	@echo "building test file"
 	gcc app.o locations.o app_collector.o -o test
 
+autocomplete: autocomplete.c
+	@echo "Building autocomplete.c"
+	gcc autocomplete.c -lreadline -o autocomplete.o
+
 clean:
 	@if test -f nurky; then rm nurky; fi
 	@if test -f locations.o; then rm locations.o; fi
