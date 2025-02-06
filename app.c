@@ -82,3 +82,31 @@ App **combine_apps(App **apps_a, App **apps_b)
     free(apps_b);
     return apps_a;
 }
+
+char **get_app_names(App **apps)
+{
+    if (!apps)
+    {
+        return NULL;
+    }
+
+    size_t count = 0;
+    while (apps[count] != NULL)
+    {
+        count++;
+    }
+
+    char **names = malloc((count + 1) * sizeof(char *));
+    if (!names)
+    {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < count; i++)
+    {
+        names[i] = apps[i]->name;
+    }
+
+    names[count] = NULL;
+    return names;
+}

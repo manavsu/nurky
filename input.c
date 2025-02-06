@@ -1,6 +1,9 @@
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
+#include "app_collector.h"
+#include "app.h"
+#include "autocomplete.h"
 
 #define ESCAPE_KEY 27
 
@@ -9,7 +12,6 @@
 
 #define MAX_INPUT_LENGTH 32
 #define MAX_COMPLETION_LENGTH 32
-
 
 void cleanup_and_exit()
 {
@@ -59,16 +61,22 @@ void handle_input(char input[], bool *init)
             input[len + 1] = '\0';
         }
     }
+    else if (input_char = KEY_ENTER) {
+        
+    }
 }
 
 int main()
 {
+    App **apps = collect_apps();
+    char **app_names = get_app_names(apps);
+
     initscr();
 
     // Make input non-blocking
     nodelay(stdscr, FALSE);
     noecho();
-        keypad(stdscr, TRUE);
+    keypad(stdscr, TRUE);
 
     int height, width;
 
@@ -86,20 +94,30 @@ int main()
         int start_x = (width - 32) / 2;
         int start_y = height / 2 - 5;
 
-        // Print first to manage cursor position
-        mvprintw(start_y + 4, start_x, "--------------------------------");
-        mvprintw(start_y + 5, start_x, "Dummy text line 1");
-        mvprintw(start_y + 6, start_x, "Dummy text line 2");
-        mvprintw(start_y + 7, start_x, "Dummy text line 3");
+        WINDOW *completions_win = newwin(10, MAX_COMPLETION_LENGTH + 3, start_y + 3, start_x - 2);
+        box(completions_win, 0, 0);
+        if (!init)
+        {
+            char **completions = get_completions(app_names, message, msg_length, 8);
 
-        WINDOW *completions_win = newwin(5, MAX_COMPLETION_LENGTH + 3, start_y + 3, start_x - 2);
-        
+            for (int i = 0; completions[i] != NULL; i++)
+            {
+                mvwprintw(completions_win, 1+i, 2, "%s", completions[i]);
+            }
+
+            for (int i = 0; completions[i] != NULL; i++)
+            {
+                free(completions[i]);
+            }
+            free(completions);
+        }
 
         WINDOW *input_win = newwin(3, MAX_INPUT_LENGTH + 3, start_y, start_x - 2);
         box(input_win, 0, 0);
         mvwprintw(input_win, 1, 2, "%s", message);
 
         refresh();
+        wrefresh(completions_win);
         wrefresh(input_win);
         handle_input(message, &init);
     }

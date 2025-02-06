@@ -25,7 +25,11 @@ test: app locations app_collector
 
 autocomplete: autocomplete.c
 	@echo "Building autocomplete.c"
-	gcc autocomplete.c -lreadline -o autocomplete.o
+	gcc -c autocomplete.c -lreadline -o autocomplete.o
+
+input: app app_collector autocomplete input.c locations
+	@echo "Building input.c"
+	gcc input.c -lncurses app.o locations.o app_collector.o autocomplete.o -o input
 
 clean:
 	@if test -f nurky; then rm nurky; fi

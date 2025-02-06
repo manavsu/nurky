@@ -154,24 +154,24 @@ App **collect_apps()
     return discoverd_apps;
 }
 
-int main()
-{
-    App **discoverd_apps = NULL;
-    char **locations;
+// int main()
+// {
+//     App **discoverd_apps = NULL;
+//     char **locations;
 
-    locations = get_possible_app_locations();
-    for (int i = 0; locations[i] != NULL; i++)
-    {
-        App **apps = search_desktop_files(locations[i]);
-        if (apps)
-        {
-            discoverd_apps = combine_apps(discoverd_apps, apps);
-        }
-    }
-    for (int i = 0; discoverd_apps[i] != NULL; i++)
-    {
-        printf("apps[%d] -> Name: %s | Exec: %s\n", i, discoverd_apps[i]->name, discoverd_apps[i]->exec);
-    }
+//     locations = get_possible_app_locations();
+//     for (int i = 0; locations[i] != NULL; i++)
+//     {
+//         App **apps = search_desktop_files(locations[i]);
+//         if (apps)
+//         {
+//             discoverd_apps = combine_apps(discoverd_apps, apps);
+//         }
+//     }
+//     for (int i = 0; discoverd_apps[i] != NULL; i++)
+//     {
+//         printf("apps[%d] -> Name: %s | Exec: %s\n", i, discoverd_apps[i]->name, discoverd_apps[i]->exec);
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

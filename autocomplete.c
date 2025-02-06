@@ -4,91 +4,112 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-// Define a structure for words with popularity scores
 typedef struct {
-    const char *word;
-    int score; // Higher score = more popular
-} Word;
+    char *completion;
+    int score;
+} ScoredCompletion;
 
-// List of predefined words with popularity scores
-Word words[] = {
-    {"hello", 5},
-    {"help", 2},
-    {"hell", 8},
-    {"hero", 3},
-    {"heron", 1},
-    {"hope", 6},
-    {NULL, 0} // Marks the end of the list
-};
-
-// Function to compare words by score (descending order)
-int compare_words(const void *a, const void *b) {
-    Word *wordA = (Word *)a;
-    Word *wordB = (Word *)b;
-    return wordB->score - wordA->score;
+int compare_scores(const void *a, const void *b) {
+    ScoredCompletion *sc1 = (ScoredCompletion *)a;
+    ScoredCompletion *sc2 = (ScoredCompletion *)b;
+    return sc2->score - sc1->score;
 }
 
-// Function to generate autocomplete suggestions
-char *word_generator(const char *text, int state) {
-    static int list_index, len;
-    static Word sorted_words[sizeof(words) / sizeof(words[0])];
-    const char *word;
-
-    if (!state) {
-        // Reset index and copy words for sorting
-        list_index = 0;
-        len = strlen(text);
-        memcpy(sorted_words, words, sizeof(words));
-        qsort(sorted_words, sizeof(sorted_words) / sizeof(sorted_words[0]) - 1, sizeof(Word), compare_words);
+int common_prefix_length(const char *str1, const char *str2) {
+    int length = 0;
+    while (*str1 && *str2 && *str1 == *str2) {
+        length++;
+        str1++;
+        str2++;
     }
+    return length;
+}
 
-    // Iterate over sorted words to find matches
-    while (sorted_words[list_index].word) {
-        word = sorted_words[list_index++].word;
-        if (strncmp(word, text, len) == 0) {
-            return strdup(word); // Return matching word
+void preprocess_string(const char *src, char *dest) {
+    while (*src) {
+        if (!isspace((unsigned char)*src)) {
+            *dest++ = tolower((unsigned char)*src);
+        }
+        src++;
+    }
+    *dest = '\0';
+}
+
+char **get_completions(char **completions, char *input, int input_length, int max_completions_count) { //TODO: Remove hardcoded size
+    ScoredCompletion scored_completions[100];
+    int count = 0;
+
+    char preprocessed_input[100];
+    preprocess_string(input, preprocessed_input);
+
+    for (int i = 0; completions[i] != NULL; i++) {
+        char preprocessed_completion[100];
+        preprocess_string(completions[i], preprocessed_completion);
+        int score = common_prefix_length(preprocessed_completion, preprocessed_input);
+        if (score >= 0) {
+            scored_completions[count].completion = completions[i];
+            scored_completions[count].score = score;
+            count++;
         }
     }
 
-    return NULL; // No more matches
-}
+    qsort(scored_completions, count, sizeof(ScoredCompletion), compare_scores);
 
-char **get_completions(const char *text, const char[] words, int num_completions) {
-    char **completions = NULL;
-    int i, j;
-
-    for (i = 0; words[i]; i++) {
-        if (strncmp(text, words[i], strlen(text)) == 0) {
-            completions = realloc(completions, (num_completions + 1) * sizeof(char *));
-            completions[num_completions++] = strdup(words[i]);
+    char **matches = malloc(max_completions_count * sizeof(char *));
+    int i;
+    for (i = 0; i < count && i < max_completions_count; i++) {
+        if (scored_completions[i].score < input_length && input_length != 0) {
+            break;
         }
+        matches[i] = strdup(scored_completions[i].completion);
     }
 
-    return completions;
+    matches[i] = NULL;
+
+    return matches;
 }
 
-// Function to initialize Readline autocomplete
-char **autocomplete(const char *text, int start, int end) {
-    // Use word_generator to provide matches
-    return rl_completion_matches(text, word_generator);
-}
+// int main() {
+//     char *completions[] = {
+//         "apple",
+//         "banana",
+//         "cherry",
+//         "date",
+//         "fig",
+//         "grape",
+//         "kiwi",
+//         "lemon",
+//         "mango",
+//         "orange",
+//         "peach",
+//         "pear",
+//         "plum",
+//         "raspberry",
+//         "strawberry",
+//         "watermelon",
+//         NULL
+//     };
 
-int main() {
-    // Set up Readline to use our autocomplete function
-    rl_attempted_completion_function = autocomplete;
+//     char *input;
+//     char prompt[] = "Enter a fruit: ";
+//     int max_completions_count = 5;
 
-    char *input;
+//     while ((input = readline(prompt)) != NULL) {
+//         int input_length = strlen(input);
+//         char **matches = get_completions(completions, input, input_length, max_completions_count);
 
-    printf("Type something (autocomplete with popularity scores):\n");
-    while ((input = readline("> ")) != NULL) {
-        if (*input) {
-            add_history(input); // Add non-empty input to history
-        }
+//         for (int i = 0; matches[i] != NULL; i++) {
+//             printf("%s\n", matches[i]);
+//         }
 
-        printf("You typed: %s\n", input);
+//         for (int i = 0; matches[i] != NULL; i++) {
+//             free(matches[i]);
+//         }
+//         free(matches);
 
-        free(input); // Free memory allocated by readline
-    }
+//         add_history(input);
+//         free(input);
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

@@ -12,5 +12,6 @@ typedef struct
 
 App **append_app(App **apps, App *app); // TODO: Pass in count here
 App **combine_apps(App **pps1, App **apps2);
+char **get_app_names(App **apps);
 
 #endif
