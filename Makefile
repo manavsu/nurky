@@ -31,6 +31,14 @@ input: app app_collector autocomplete input.c locations
 	@echo "Building input.c"
 	gcc input.c -lncurses app.o locations.o app_collector.o autocomplete.o -o input
 
+launcher: launcher.c
+	@echo "Building launcher.c"
+	gcc -c launcher.c -o launcher.o
+
+main: app app_collector autocomplete launcher main.c locations
+	@echo "Building main.c"
+	gcc main.c -lncurses app.o locations.o app_collector.o autocomplete.o launcher.o -o nurky
+
 clean:
 	@if test -f nurky; then rm nurky; fi
 	@if test -f locations.o; then rm locations.o; fi

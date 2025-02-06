@@ -5,6 +5,7 @@
 #include "app.h"
 #include "autocomplete.h"
 
+
 #define ESCAPE_KEY 27
 
 #define INPUT_MIN_CHAR 32
@@ -19,7 +20,7 @@ void cleanup_and_exit()
     exit(0);
 }
 
-void handle_input(char input[], bool *init)
+int handle_input(char input[], bool *init)
 {
     int input_char = getch();
     if (input_char == ERR)
@@ -62,8 +63,9 @@ void handle_input(char input[], bool *init)
         }
     }
     else if (input_char = KEY_ENTER) {
-        
+        return 1;
     }
+    return 0;
 }
 
 int main()
@@ -119,6 +121,8 @@ int main()
         refresh();
         wrefresh(completions_win);
         wrefresh(input_win);
-        handle_input(message, &init);
+        if (handle_input(message, &init)) {
+            
+        }
     }
 }
