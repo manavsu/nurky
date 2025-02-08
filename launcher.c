@@ -66,7 +66,6 @@ void daemonize(const char *cmd)
 
 int launch(char exec[])
 {
-    printf("%s", exec);
     daemonize(exec);
 
     char *args[] = {exec, NULL};
