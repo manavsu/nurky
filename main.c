@@ -150,8 +150,6 @@ int main()
 
                     if (strcmp(app_name_lower, completion_lower) == 0)
                     {
-                        printf("%s\n", apps[i]->exec);
-                        printf("%s\n", completion_lower);
                         launch(apps[i]->exec);
                         break;
                     }
